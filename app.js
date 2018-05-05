@@ -1,14 +1,18 @@
 'use strict'
 
 require('dotenv').config()
+let mongojs = require('mongojs');
 
 let Email = require('./models/email')
 let nodemailer = require('nodemailer')
+let db = mongojs('localhost:27017/mailer');
+let schedule = require('node-schedule');
 
 let express = require('express')
-var bodyParser = require('body-parser')
-var urlencodeParser = bodyParser.urlencoded({extended: false})
+let bodyParser = require('body-parser')
+let urlencodeParser = bodyParser.urlencoded({extended: false})
 
+let historyCollection = db.collection('history');
 let app = express()
 let debug = false
 
@@ -22,7 +26,7 @@ app.use(bodyParser.json()) // for parsing application/json
 app.use(bodyParser.urlencoded({extended: true})) // for parsing application/x-www-form-urlencoded
 
 app.get('/', (req, res) => {
-  res.status(200).render('index')
+    res.status(200).render('index')
 })
 
 app.post('/sendMail', urlencodeParser, function (req, res) {
@@ -32,7 +36,13 @@ app.post('/sendMail', urlencodeParser, function (req, res) {
   } else {
     let email = parseEmailFromRequest(req)
     writeEmailToDatabase(email)
-    debug ? sendEmail(email) : placeEmailToQueue(email)
+    let date = new Date(email.getSendOn());
+
+    let taskBackground = schedule.scheduleJob(date, function () {
+          console.log('magic');
+          sendMail(email);
+    });
+
     return res.status(200).render('submit-mail-success')
   }
 })
@@ -63,15 +73,15 @@ function validateEmail (email) {
   && !!email['subject']
   && !!email['message']
   && !!email['send_on']
-  && new Date(req.body['send_on']) > Date.now()
+  && new Date(email['send_on']) > Date.now()
 }
 
 function sendMail (email) {
   var transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: 'thuguituonglai45102@gmail.com',
-      pass: '135792468abc'
+        user: process.env.EMAIL,
+        pass: process.env.PASSWORD
     }
   })
 
@@ -91,15 +101,7 @@ function sendMail (email) {
   })
 }
 
-function placeEmailToQueue (email) {
-  setTimeout(() => sendMail(email), howfar(new Date(), email.getSendOn))
-}
-
-function howfar(date1, date2) {
-  // given date2 later than date 1
-  return date2.getTime() - date1.getTime
-}
 
 function writeEmailToDatabase (email) {
-
+    historyCollection.insert(email.toJson())
 }

@@ -20,13 +20,24 @@ let Email = function () {
   this.setFromName = (fromName) => _fromName = fromName
 
   this.getSubject = () => _subject
-  this.setSubject = (subject) => _subject = subjet
+  this.setSubject = (subject) => _subject = subject
 
   this.getMessage = () => _message
   this.setMessage = (mes) => _message = mes
 
   this.getSendOn = () => _sendOn
   this.setSendOn = (datetime) => _sendOn = datetime
+  this.toJson = () => {
+      return {
+        to: _to,
+        toName: _toName,
+        from: _from,
+        fromName: _fromName,
+        subject: _subject,
+        message: _message,
+        sendOn: _sendOn,
+      }
+    }
 }
 
 module.exports = Email
